@@ -9,6 +9,6 @@ class StatusCode:
     INTERNAL_ERROR = 500
 
 
-class ExpectedText:
+class Expected:
     content_type = 'application/json'
-
+    count_headers = 3
