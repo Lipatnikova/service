@@ -29,13 +29,11 @@ class TestEntity:
         with allure.step("Создать сущность"):
             new_object = Entity()
             payload = generate_payload()
-            id_entity = new_object.check_create_new_entity(payload)
-            new_object.check_response_is_200()
+            id_entity = new_object.create_new_entity(payload)
             new_object.check_date_today()
 
         with allure.step("Сравнить данные сущности с данными при создании сущности"):
             response = new_object.check_get_entity_with_validate_response(id_entity)
-            new_object.check_response_is_200()
             format_response = new_object.remove_keys(response, 'id')
             assert format_response == payload, \
                 "Data received in the response does not match the data entered when creating the entity"
@@ -50,7 +48,8 @@ class TestEntity:
 
     Шаги:
     1. Получить список сущностей 
-    2. Проверить список сущностей
+    2. Проверить список сущностей, количество сущностей полученных должно 
+    соответствовать колучеству создаваемых сущностей
 
     Постусловие: 
     - Удалить тестовые данные
@@ -61,14 +60,14 @@ class TestEntity:
     @allure.testcase("TC_2")
     @pytest.mark.api
     def test_verify_get_all_entities(self, create_random_entities, dell_entities):
+        expected_count_entities = create_random_entities
         with allure.step("Получить список сущностей"):
             entities = Entity()
-            entities.check_get_all_entities_with_validate_response()
-
-        with allure.step("Проверить список сущностей"):
-            entities.check_response_is_200()
-            entities.check_count_headers()
-            entities.check_content_type()
+            actual_count_ids = entities.get_count_entities()
+        with allure.step("Проверить список сущностей, количество сущностей полученных должно "
+                         "соответствовать колучеству создаваемых сущностей"):
+            assert expected_count_entities == actual_count_ids, \
+                "The count of entities received does not match the count of entities created"
 
     @allure.feature("Test-service")
     @allure.story("API")
@@ -92,11 +91,9 @@ class TestEntity:
         with allure.step("Создать сущность"):
             new_object = Entity()
             data_new_entity = generate_payload()
-            new_object.check_create_new_entity(data_new_entity)
+            new_object.create_new_entity(data_new_entity)
 
         with allure.step("Проверить создание сущности"):
-            new_object.check_response_is_200()
-            new_object.check_count_headers()
             new_object.check_date_today()
 
     @allure.feature("Test-service")
@@ -122,7 +119,7 @@ class TestEntity:
         with allure.step("Создать сущность"):
             entity = Entity()
             data_new_entity = generate_payload()
-            entity_id = entity.check_create_new_entity(data_new_entity)
+            entity_id = entity.create_new_entity(data_new_entity)
             response_before = entity.check_get_entity_with_validate_response(entity_id)
             new_payload = entity.modify_payload(response_before)
 

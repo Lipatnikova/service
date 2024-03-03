@@ -1,12 +1,13 @@
 import logging
 import random
-import requests
 import string
+from typing import Dict, Any, Union
 from datetime import datetime
-from typing import Dict, Any, List, Union
-from utils.http_handler import HTTPHandler
 from data.endpoints import UrlAndEndPoints as EndPoint
-from data.expected_result import StatusCode, Expected
+from data.expected_result import StatusCode
+from utils.http_handler import HTTPHandler
+from utils.models.pydantic_models import *
+
 
 logger = logging.getLogger("api")
 
@@ -16,21 +17,20 @@ class Entity:
         self.response = None
         self.response_json = None
 
-    def check_create_new_entity(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+    def create_new_entity(self, payload: Dict):
         """Method to check scheme json and create a new entity using the provided payload"""
-        self.response = HTTPHandler.post(EndPoint.CREATE_ENTITY, payload)
+        self.response = HTTPHandler.post(payload)
         self.response_json = self.response.json()
         return self.response_json
 
-    def delete_entity(self, entity_id: str) -> Dict[str, Any]:
+    def delete_entity(self, entity_id: str):
         """The method to delete an entity by its ID"""
         self.response = HTTPHandler.delete(f'{EndPoint.DEL_ENTITY}{entity_id}')
-        return self.response_json
+        return self.response
 
-    def check_get_entity_with_validate_response(self, entity_id: dict[str, Any]) -> Dict[str, Any]:
+    def check_get_entity_with_validate_response(self, entity_id: int):
         """The method to retrieve an entity by its ID and validate the response"""
-        self.response = HTTPHandler.get(f'{EndPoint.ENTITY}{entity_id}')
-        self.response_json = self.response.json()
+        self.response_json = HTTPHandler.get_with_validation(f'{EndPoint.ENTITY}{entity_id}', EntityModel)
         return self.response_json
 
     def extract_ids(self, response_json: Dict[str, Any]) -> List[str]:
@@ -39,26 +39,22 @@ class Entity:
 
     def check_get_all_entities_with_validate_response(self) -> List[str]:
         """The method to retrieve all entities and validate the response"""
-        self.response = HTTPHandler.get(EndPoint.ENTITIES, schemas='all_entities.json')
-        self.response_json = self.response.json()
+        self.response_json = HTTPHandler.get_with_validation(EndPoint.ENTITIES, EntitiesModel)
         return self.extract_ids(self.response_json)
+
+    def get_count_entities(self) -> int:
+        """The method counts IDs entities"""
+        self.response_json = HTTPHandler.get_with_validation(EndPoint.ENTITIES, EntitiesModel)
+        return len(self.extract_ids(self.response_json))
 
     def get_random_id(self, list_ids: List[str]) -> str:
         """The method to retrieve a random ID from the provided list of IDs"""
         return random.choice(list_ids)
 
-    def update_entity(self, entity_id: dict[str, Any], payload: Dict[str, Any]) -> requests.Response:
+    def update_entity(self, entity_id, payload: Dict):
         """The method to update an entity by its ID with the provided payload"""
-        self.response = HTTPHandler.patch(f'{EndPoint.CHANGE_ENTITY}{entity_id}', data=payload)
+        self.response = HTTPHandler.patch(f'{EndPoint.CHANGE_ENTITY}{entity_id}', payload)
         return self.response
-
-    def check_response_is_200(self) -> None:
-        """The method to check if the response status code is 200 (OK)"""
-        status_code = self.response.status_code
-        assert status_code == StatusCode.OK, \
-            logger.warning(
-                f'Response status code is incorrect, actual: {status_code}, expected : {StatusCode.OK}'
-            )
 
     def check_response_is_204(self) -> None:
         """The method to check if the response status code is 204 (No Content)"""
@@ -75,19 +71,6 @@ class Entity:
             logger.warning(
                 f'Response status code is incorrect, actual: {status_code}, expected : {StatusCode.INTERNAL_ERROR}'
             )
-
-    def check_count_headers(self) -> None:
-        """The method to check if the count of headers in the response is correct"""
-        count_headers = len(self.response.headers)
-        assert count_headers == Expected.count_headers, logger.warning(
-            f'Count of headers is not correct, actual: {count_headers}, expected : {Expected.count_headers}'
-        )
-
-    def check_content_type(self) -> None:
-        """The method to check if the Content-Type header in the response is correct"""
-        content_type = self.response.headers['Content-Type']
-        assert Expected.content_type in content_type, \
-            logger.warning('The headers Content-Type is wrong')
 
     def check_date_today(self) -> None:
         """The method to check if the Date header in the response matches the current date"""

@@ -18,6 +18,11 @@ def dell_entities():
 
 @pytest.fixture()
 def create_random_entities():
-    entities = Entity()
-    for _ in range(random.randint(2, 5)):
-        entities.check_create_new_entity(generate_payload())
+    """Create a random number of entities using the check_create_new_entity method"""
+    entities = []
+    new_object = Entity()
+    for _ in range(random.randint(2, 10)):
+        payload = generate_payload()
+        entity_json = new_object.create_new_entity(payload)
+        entities.append(entity_json)
+    return len(entities)
