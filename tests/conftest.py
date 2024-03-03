@@ -1,7 +1,7 @@
 import pytest
 import random
 from generator.generator import generate_payload
-from modules.entity import Entity
+from modules.entity import Entity, Assertions
 
 
 @pytest.fixture()
@@ -10,10 +10,10 @@ def dell_entities():
     entities = Entity()
     ids = entities.check_get_all_entities_with_validate_response()
     for i in ids:
-        entities.delete_entity(i)
-        entities.check_response_is_204()
-        entities.delete_entity(i)
-        entities.check_response_is_500()
+        response = entities.delete_entity(i)
+        Assertions.check_response_is_204(response)
+        response = entities.delete_entity(i)
+        Assertions.check_response_is_500(response)
 
 
 @pytest.fixture()

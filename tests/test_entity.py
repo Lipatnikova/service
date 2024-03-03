@@ -1,7 +1,7 @@
 import allure
 import pytest
-from modules.entity import Entity
-from generator.generator import generate_payload
+from modules.entity import Entity, Assertions
+from generator.generator import generate_payload, modify_payload
 
 
 class TestEntity:
@@ -29,8 +29,9 @@ class TestEntity:
         with allure.step("Создать сущность"):
             new_object = Entity()
             payload = generate_payload()
-            id_entity = new_object.create_new_entity(payload)
-            new_object.check_date_today()
+            response = new_object.create_new_entity(payload)
+            id_entity = new_object.get_id_created_entity()
+            Assertions.check_date_today(response)
 
         with allure.step("Сравнить данные сущности с данными при создании сущности"):
             response = new_object.check_get_entity_with_validate_response(id_entity)
@@ -77,7 +78,8 @@ class TestEntity:
 
     Шаги:
     1. Создать сущность
-    2. Проверить создание сущности
+    2. Проверить, что в списке всех сущностей имеется запись 
+    с additional_info сгенерированной при создании сущности"
 
     Постусловие: 
     - Удалить тестовые данные
@@ -91,10 +93,16 @@ class TestEntity:
         with allure.step("Создать сущность"):
             new_object = Entity()
             data_new_entity = generate_payload()
-            new_object.create_new_entity(data_new_entity)
+            response = new_object.create_new_entity(data_new_entity)
 
-        with allure.step("Проверить создание сущности"):
-            new_object.check_date_today()
+        with allure.step("Проверить, что в списке всех сущностей имеется запись "
+                         "с additional_info сгенерированной при создании сущности"):
+            Assertions.check_date_today(response)
+            all_entities = new_object.check_get_all_entities_with_validate_response_json()
+            expected_additional_info = new_object.extract_additional_info(data_new_entity)
+            actual_additional_info = new_object.extract_additional_info_all_entity(all_entities)
+            assert expected_additional_info == actual_additional_info, \
+                "List all entities does not contain an entry with expected 'additional_info'"
 
     @allure.feature("Test-service")
     @allure.story("API")
@@ -119,14 +127,15 @@ class TestEntity:
         with allure.step("Создать сущность"):
             entity = Entity()
             data_new_entity = generate_payload()
-            entity_id = entity.create_new_entity(data_new_entity)
+            entity.create_new_entity(data_new_entity)
+            entity_id = entity.get_id_created_entity()
             response_before = entity.check_get_entity_with_validate_response(entity_id)
-            new_payload = entity.modify_payload(response_before)
+            new_payload = modify_payload(response_before)
 
         with allure.step("Обновить данные у сущности"):
-            entity.update_entity(entity_id, new_payload)
-            entity.check_response_is_204()
-            entity.check_date_today()
+            response = entity.update_entity(entity_id, new_payload)
+            Assertions.check_response_is_204(response)
+            Assertions.check_date_today(response)
             response_after = entity.check_get_entity_with_validate_response(entity_id)
             response_after = entity.remove_keys(response_after, "id")
 
@@ -162,10 +171,10 @@ class TestEntity:
 
         with allure.step("Удалить рандомную сущность"):
             random_id_entity = entities.get_random_id(ids)
-            entities.delete_entity(random_id_entity)
-            entities.check_response_is_204()
-            entities.delete_entity(random_id_entity)
-            entities.check_response_is_500()
+            response = entities.delete_entity(random_id_entity)
+            Assertions.check_response_is_204(response)
+            response = entities.delete_entity(random_id_entity)
+            Assertions.check_response_is_500(response)
 
         with allure.step("Проверить, что в списке сущностей отсутствует удаленная сущность"):
             list_entity = entities.check_get_all_entities_with_validate_response()

@@ -4,7 +4,7 @@ import requests
 from requests import Response
 from pydantic import ValidationError, BaseModel
 from typing import Type, Dict
-from data.expected_result import StatusCode, Expected
+from data.expected_result import StatusCode, ExpectedData
 from data.endpoints import UrlAndEndPoints as EndPoint
 
 logger = logging.getLogger("api")
@@ -23,15 +23,15 @@ class HTTPHandler:
     def check_count_headers(response: Response) -> None:
         """The method to check if the count of headers in the response is correct"""
         count_headers = len(response.headers)
-        assert count_headers == Expected.count_headers, logger.warning(
-            f'Count of headers is not correct, actual: {count_headers}, expected : {Expected.count_headers}'
+        assert count_headers == ExpectedData.count_headers, logger.warning(
+            f'Count of headers is not correct, actual: {count_headers}, expected : {ExpectedData.count_headers}'
         )
 
     @staticmethod
     def check_content_type(response: Response) -> None:
         """The method to check if the Content-Type header in the response is correct"""
         content_type = response.headers['Content-Type']
-        assert Expected.content_type in content_type, \
+        assert ExpectedData.content_type in content_type, \
             logger.warning('The headers Content-Type is wrong')
 
     @classmethod
@@ -53,22 +53,22 @@ class HTTPHandler:
 
         return validated_data.model_dump()
 
-    @classmethod
-    def post(cls, payload: Dict) -> requests.Response:
+    @staticmethod
+    def post(payload: Dict) -> requests.Response:
         """The method to perform a POST request to the specified endpoint with the provided data"""
         url = f"{EndPoint.BASE_URL}{EndPoint.CREATE_ENTITY}"
         response = requests.post(url, json=payload)
         return response
 
-    @classmethod
-    def patch(cls, endpoint: str, payload: Dict) -> requests.Response:
+    @staticmethod
+    def patch(endpoint: str, payload: Dict) -> requests.Response:
         """The method to perform a PATCH request to the specified endpoint with the provided data"""
         url = f"{EndPoint.BASE_URL}{endpoint}"
         response = requests.patch(url, json=payload)
         return response
 
-    @classmethod
-    def delete(cls, endpoint: str) -> requests.Response:
+    @staticmethod
+    def delete(endpoint: str) -> requests.Response:
         """The method to perform a DELETE request to the specified endpoint"""
         url = f"{EndPoint.BASE_URL}{endpoint}"
         response = requests.delete(url)

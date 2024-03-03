@@ -1,3 +1,5 @@
+import random
+import string
 from dataclasses import dataclass, field
 from faker import Faker
 
@@ -34,3 +36,11 @@ class Payload:
 
 def generate_payload():
     return Payload().to_dict()
+
+
+def modify_payload(new_payload):
+    """The method to modify a payload by removing specified keys and adding additional information"""
+    keys_to_remove = ['id', 'verified']
+    new_payload = {key: value for key, value in new_payload.items() if key not in keys_to_remove}
+    new_payload['addition']['additional_info'] = ''.join(random.choices(string.ascii_letters, k=10))
+    return new_payload
