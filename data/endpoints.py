@@ -1,11 +1,9 @@
-"""
-This section contains url and endpoints
-"""
+import os
 
 
 class UrlAndEndPoints:
 
-    BASE_URL = "http://localhost:8080/"
+    BASE_URL = os.getenv("BASE_URL")
 
     ENTITIES = "api/getAll"
     ENTITY = f"api/get/"
