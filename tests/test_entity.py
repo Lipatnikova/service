@@ -1,6 +1,6 @@
 import allure
 import pytest
-from modules.entity import Entity, Assertions
+from modules.entity import SendRequest, Assertions, ConversionData
 from generator.generator import generate_payload, modify_payload
 
 
@@ -27,15 +27,15 @@ class TestEntity:
     @pytest.mark.api
     def test_verify_get_entity(self, dell_entities):
         with allure.step("Создать сущность"):
-            new_object = Entity()
+            new_object = SendRequest()
             payload = generate_payload()
             response = new_object.create_new_entity(payload)
-            id_entity = new_object.get_id_created_entity()
+            id_entity = ConversionData.get_id_created_entity(response)
             Assertions.check_date_today(response)
 
         with allure.step("Сравнить данные сущности с данными при создании сущности"):
             response = new_object.check_get_entity_with_validate_response(id_entity)
-            format_response = new_object.remove_keys(response, 'id')
+            format_response = ConversionData.remove_keys(response, 'id')
             assert format_response == payload, \
                 "Data received in the response does not match the data entered when creating the entity"
 
@@ -63,8 +63,10 @@ class TestEntity:
     def test_verify_get_all_entities(self, create_random_entities, dell_entities):
         expected_count_entities = create_random_entities
         with allure.step("Получить список сущностей"):
-            entities = Entity()
-            actual_count_ids = entities.get_count_entities()
+            entities = SendRequest()
+            response_json = entities.check_get_all_entities_with_validate_response_json()
+            ids = ConversionData.extract_ids(response_json)
+            actual_count_ids = ConversionData.get_count_entities(ids)
         with allure.step("Проверить список сущностей, количество сущностей полученных должно "
                          "соответствовать колучеству создаваемых сущностей"):
             assert expected_count_entities == actual_count_ids, \
@@ -91,7 +93,7 @@ class TestEntity:
     @pytest.mark.api
     def test_verify_create_entity(self, dell_entities):
         with allure.step("Создать сущность"):
-            new_object = Entity()
+            new_object = SendRequest()
             data_new_entity = generate_payload()
             response = new_object.create_new_entity(data_new_entity)
 
@@ -99,8 +101,8 @@ class TestEntity:
                          "с additional_info сгенерированной при создании сущности"):
             Assertions.check_date_today(response)
             all_entities = new_object.check_get_all_entities_with_validate_response_json()
-            expected_additional_info = new_object.extract_additional_info(data_new_entity)
-            actual_additional_info = new_object.extract_additional_info_all_entity(all_entities)
+            expected_additional_info = ConversionData.extract_additional_info(data_new_entity)
+            actual_additional_info = ConversionData.extract_additional_info_all_entity(all_entities)
             assert expected_additional_info == actual_additional_info, \
                 "List all entities does not contain an entry with expected 'additional_info'"
 
@@ -125,10 +127,10 @@ class TestEntity:
     @pytest.mark.api
     def test_create_and_update_entity(self, dell_entities):
         with allure.step("Создать сущность"):
-            entity = Entity()
+            entity = SendRequest()
             data_new_entity = generate_payload()
-            entity.create_new_entity(data_new_entity)
-            entity_id = entity.get_id_created_entity()
+            response = entity.create_new_entity(data_new_entity)
+            entity_id = ConversionData.get_id_created_entity(response)
             response_before = entity.check_get_entity_with_validate_response(entity_id)
             new_payload = modify_payload(response_before)
 
@@ -137,7 +139,7 @@ class TestEntity:
             Assertions.check_response_is_204(response)
             Assertions.check_date_today(response)
             response_after = entity.check_get_entity_with_validate_response(entity_id)
-            response_after = entity.remove_keys(response_after, "id")
+            response_after = ConversionData.remove_keys(response_after, "id")
 
         with allure.step("Проверить, что данные сущности изменились"):
             assert data_new_entity != response_after, \
@@ -166,17 +168,19 @@ class TestEntity:
     @pytest.mark.api
     def test_check_delete_random_entity_by_random_id(self, create_random_entities, dell_entities):
         with allure.step("Получить список сущностей"):
-            entities = Entity()
-            ids = entities.check_get_all_entities_with_validate_response()
+            entities = SendRequest()
+            response_json = entities.check_get_all_entities_with_validate_response_json()
+            ids = ConversionData.extract_ids(response_json)
 
         with allure.step("Удалить рандомную сущность"):
-            random_id_entity = entities.get_random_id(ids)
+            random_id_entity = ConversionData.get_random_id(ids)
             response = entities.delete_entity(random_id_entity)
             Assertions.check_response_is_204(response)
             response = entities.delete_entity(random_id_entity)
             Assertions.check_response_is_500(response)
 
         with allure.step("Проверить, что в списке сущностей отсутствует удаленная сущность"):
-            list_entity = entities.check_get_all_entities_with_validate_response()
+            response = entities.check_get_all_entities_with_validate_response_json()
+            list_entity = ConversionData.extract_ids(response)
             assert (random_id_entity in list_entity) is False, \
                 'The entity with the selected ID was not deleted'

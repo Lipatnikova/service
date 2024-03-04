@@ -11,7 +11,7 @@ from utils.models.pydantic_models import *
 logger = logging.getLogger("api")
 
 
-class Entity:
+class SendRequest:
     def __init__(self):
         self.response = None
         self.response_json = None
@@ -20,11 +20,6 @@ class Entity:
         """Method to check scheme json and create a new entity using the provided payload"""
         self.response = HTTPHandler.post(payload)
         return self.response
-
-    def get_id_created_entity(self):
-        """Retrieves the ID of the created entity from the response JSON"""
-        self.response_json = self.response.json()
-        return self.response_json
 
     def delete_entity(self, entity_id: str):
         """The method to delete an entity by its ID"""
@@ -46,39 +41,47 @@ class Entity:
         self.response = HTTPHandler.patch(f'{EndPoint.CHANGE_ENTITY}{entity_id}', payload)
         return self.response
 
-    def extract_additional_info(self, data_new_entity):
+
+class ConversionData:
+    @staticmethod
+    def extract_ids(response_json) -> List[str]:
+        """The method to extract IDs from the response"""
+        return [item['id'] for item in response_json['entity']]
+
+    @staticmethod
+    def get_count_entities(ids) -> int:
+        """The method counts IDs entities"""
+        return len(ids)
+
+    @staticmethod
+    def get_id_created_entity(response):
+        """Retrieves the ID of the created entity from the response JSON"""
+        response_json = response.json()
+        return response_json
+
+    @staticmethod
+    def extract_additional_info(data_new_entity):
         """Extracts the additional info from the provided new entity data"""
         return data_new_entity.get('addition', {}).get('additional_info')
 
-    def extract_additional_info_all_entity(self, all_entities):
+    @staticmethod
+    def extract_additional_info_all_entity(all_entities):
         """Extracts the additional info from the provided all entities data"""
         entity = all_entities.get('entity', [])[0]
         return entity.get('addition', {}).get('additional_info')
 
-    def extract_ids(self, response_json: Dict[str, Any]) -> List[str]:
-        """The method to extract IDs from the response"""
-        return [item['id'] for item in response_json['entity']]
-
-    def check_get_all_entities_with_validate_response(self) -> List[str]:
-        """The method to retrieve all entities and validate the response"""
-        self.response_json = HTTPHandler.get_with_validation(EndPoint.ENTITIES, EntitiesModel)
-        return self.extract_ids(self.response_json)
-
-    def get_count_entities(self) -> int:
-        """The method counts IDs entities"""
-        self.response_json = HTTPHandler.get_with_validation(EndPoint.ENTITIES, EntitiesModel)
-        return len(self.extract_ids(self.response_json))
-
-    def get_random_id(self, list_ids: List[str]) -> str:
+    @staticmethod
+    def get_random_id(list_ids: List[str]) -> str:
         """The method to retrieve a random ID from the provided list of IDs"""
         return random.choice(list_ids)
 
-    def remove_keys(self, d: Union[Dict[str, Any], List[Any]], key: Any) -> Union[Dict[str, Any], List[Any]]:
+    @staticmethod
+    def remove_keys(d: Union[Dict[str, Any], List[Any]], key: Any) -> Union[Dict[str, Any], List[Any]]:
         """The method to remove keys from a dictionary or a list of dictionaries recursively"""
         if isinstance(d, dict):
-            return {k: self.remove_keys(v, key) for k, v in d.items() if k != key}
+            return {k: ConversionData.remove_keys(v, key) for k, v in d.items() if k != key}
         elif isinstance(d, list):
-            return [self.remove_keys(v, key) for v in d]
+            return [ConversionData.remove_keys(v, key) for v in d]
         else:
             return d
 
